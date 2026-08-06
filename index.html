@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Karyawan - Cek Data HM</title>
+    <!-- Mengambil desain dari Bootstrap agar langsung rapi -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f4f7f6; padding-top: 50px; }
+        .card { border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .table th { background-color: #ffe600; color: #000; text-align: center; }
+        .table td { text-align: center; vertical-align: middle; }
+        #halamanData { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <!-- HALAMAN LOGIN -->
+    <div class="row justify-content-center" id="halamanLogin">
+        <div class="col-md-5">
+            <div class="card p-4">
+                <h3 class="text-center mb-4">Login Karyawan</h3>
+                <div class="mb-3">
+                    <label>NRP</label>
+                    <input type="number" id="inputNrp" class="form-control" placeholder="Masukkan NRP">
+                </div>
+                <div class="mb-3">
+                    <label>Tanggal Lahir</label>
+                    <input type="text" id="inputTglLahir" class="form-control" placeholder="Contoh: 020196">
+                </div>
+                <button onclick="login()" class="btn btn-primary w-100" id="btnLogin">Masuk & Cari Data</button>
+                <div id="pesanError" class="text-danger mt-3 text-center"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- HALAMAN DATA (Disembunyikan sebelum login) -->
+    <div id="halamanData">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3>Data Hasil Kerja Anda</h3>
+            <button onclick="logout()" class="btn btn-danger">Keluar</button>
+        </div>
+        
+        <div class="card p-3 overflow-auto">
+            <table class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>DATE</th>
+                        <th>NRP</th>
+                        <th>NAMA KARYAWAN</th>
+                        <th>SETTINGAN</th>
+                        <th>KODE Shift (1)</th>
+                        <th>NO UNIT</th>
+                        <th>HM AWAL</th>
+                        <th>HM AKHIR</th>
+                        <th>HM TOTAL</th>
+                        <th>KET</th>
+                    </tr>
+                </thead>
+                <tbody id="isiTabel">
+                    <!-- Data akan muncul di sini otomatis -->
+                </tbody>
+                <tfoot>
+                    <tr class="table-dark">
+                        <th colspan="8" class="text-end">JUMLAH TOTAL HM:</th>
+                        <th id="totalHmBawah" style="color: #ffeb3b; font-size: 18px;">0</th>
+                        <th></th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // GANTI TULISAN DI BAWAH INI DENGAN URL DARI GOOGLE APPS SCRIPT (TAHAP 2)
+    const urlGoogleScript = "https://script.google.com/macros/s/AKfycby_UBuuUA1oJ-tWS05-R9hxRzVqplggogpLJHwz1XYGTj3LB-bH8Z-12mjtOyizsRPz/exec";
+
+    function login() {
+        const nrp = document.getElementById("inputNrp").value;
+        const tglLahir = document.getElementById("inputTglLahir").value;
+        const pesan = document.getElementById("pesanError");
+        const btn = document.getElementById("btnLogin");
+
+        if(!nrp || !tglLahir) {
+            pesan.innerText = "NRP dan Tanggal Lahir harus diisi!";
+            return;
+        }
+
+        pesan.innerText = "";
+        btn.innerText = "Mencari Data...";
+        btn.disabled = true;
+
+        // Meminta data ke Google Script
+        fetch(`${urlGoogleScript}?nrp=${nrp}&tglLahir=${tglLahir}`)
+            .then(response => response.json())
+            .then(hasil => {
+                btn.innerText = "Masuk & Cari Data";
+                btn.disabled = false;
+
+                if (hasil.status === 'sukses') {
+                    tampilkanData(hasil.data, hasil.total_semua);
+                } else {
+                    pesan.innerText = hasil.pesan;
+                }
+            })
+            .catch(error => {
+                btn.innerText = "Masuk & Cari Data";
+                btn.disabled = false;
+                pesan.innerText = "Terjadi kesalahan koneksi internet.";
+            });
+    }
+
+    function tampilkanData(data, totalHm) {
+        document.getElementById("halamanLogin").style.display = "none";
+        document.getElementById("halamanData").style.display = "block";
+        
+        let barisTabel = "";
+        data.forEach(item => {
+            barisTabel += `
+                <tr>
+                    <td>${item.date}</td>
+                    <td>${item.nrp}</td>
+                    <td>${item.nama}</td>
+                    <td>${item.settingan}</td>
+                    <td>${item.kodeShift}</td>
+                    <td>${item.noUnit}</td>
+                    <td>${item.hmAwal}</td>
+                    <td>${item.hmAkhir}</td>
+                    <td><strong>${item.hmTotal}</strong></td>
+                    <td>${item.ket}</td>
+                </tr>
+            `;
+        });
+        
+        document.getElementById("isiTabel").innerHTML = barisTabel;
+        document.getElementById("totalHmBawah").innerText = totalHm;
+    }
+
+    function logout() {
+        document.getElementById("halamanLogin").style.display = "flex";
+        document.getElementById("halamanData").style.display = "none";
+        document.getElementById("inputNrp").value = "";
+        document.getElementById("inputTglLahir").value = "";
+        document.getElementById("isiTabel").innerHTML = "";
+    }
+</script>
+</body>
+</html>

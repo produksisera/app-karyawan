@@ -4,102 +4,194 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portal Karyawan - Cek Data HM</title>
-    <!-- Mengambil desain dari Bootstrap agar langsung rapi -->
+    
+    <!-- Mengambil Font Modern dari Google -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Mengambil desain dari Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
     <style>
-        body { background-color: #f4f7f6; padding-top: 50px; }
-        .card { border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        .table th { background-color: #ffe600; color: #000; text-align: center; }
-        .table td { text-align: center; vertical-align: middle; }
+        /* Pengaturan Dasar dan Font */
+        body { 
+            background-color: #f0f2f5; 
+            font-family: 'Poppins', sans-serif;
+            padding-top: 5vh; 
+            padding-bottom: 5vh;
+        }
+        
+        /* Desain Kotak Aplikasi (Card) */
+        .card { 
+            border-radius: 15px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08); 
+            border: none;
+        }
+        
+        /* Desain Tabel */
+        .table-container {
+            max-height: 65vh; /* Membatasi tinggi tabel agar bisa di-scroll */
+            overflow-y: auto;
+            border-radius: 8px;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.05);
+        }
+        .table thead th { 
+            background-color: #2c3e50; /* Warna biru gelap / abu-abu gelap */
+            color: #ffffff; 
+            text-align: center; 
+            position: sticky; /* Membuat header tetap di atas saat di-scroll */
+            top: 0; 
+            z-index: 1;
+            white-space: nowrap;
+        }
+        .table td { 
+            text-align: center; 
+            vertical-align: middle; 
+            white-space: nowrap;
+        }
+        
+        /* Efek Interaktif: Sorot baris saat disentuh/dilewati mouse */
+        .table tbody tr {
+            transition: all 0.2s ease;
+        }
+        .table tbody tr:hover {
+            background-color: #e2e6ea !important;
+            transform: scale(1.01);
+        }
+        
+        /* PERBAIKAN: Baris Total HM (Kuning dengan teks Hitam Pekat) */
+        .row-total {
+            background-color: #ffde00 !important; /* Warna Kuning Terang */
+        }
+        .row-total th {
+            background-color: transparent !important;
+            color: #000000 !important; /* Warna Hitam */
+            font-weight: 700;
+            font-size: 1.1rem;
+            position: sticky;
+            bottom: 0; /* Menempel di bawah */
+        }
+
+        /* Efek Animasi Muncul Halus */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
         #halamanData { display: none; }
     </style>
 </head>
 <body>
 
-<div class="container">
+<div class="container fade-in">
     
     <!-- HALAMAN LOGIN -->
     <div class="row justify-content-center" id="halamanLogin">
-        <div class="col-md-5">
-            <div class="card p-4">
-                <h3 class="text-center mb-4">Login Karyawan</h3>
-                <div class="mb-3">
-                    <label>NRP</label>
-                    <input type="number" id="inputNrp" class="form-control" placeholder="Masukkan NRP">
+        <div class="col-md-6 col-lg-5">
+            <div class="card p-4 p-md-5">
+                <div class="text-center mb-4">
+                    <h3 class="fw-bold" style="color: #2c3e50;">Portal Karyawan</h3>
+                    <p class="text-muted">Masukkan kredensial Anda untuk melihat data HM</p>
                 </div>
+                
                 <div class="mb-3">
-                    <label>Tanggal Lahir</label>
-                    <input type="text" id="inputTglLahir" class="form-control" placeholder="Contoh: 020196">
+                    <label class="fw-semibold mb-1">NRP</label>
+                    <input type="number" id="inputNrp" class="form-control form-control-lg" placeholder="Contoh: 80012696">
                 </div>
-                <button onclick="login()" class="btn btn-primary w-100" id="btnLogin">Masuk & Cari Data</button>
-                <div id="pesanError" class="text-danger mt-3 text-center"></div>
+                <div class="mb-4">
+                    <label class="fw-semibold mb-1">Tanggal Lahir</label>
+                    <input type="text" id="inputTglLahir" class="form-control form-control-lg" placeholder="Contoh: 020196">
+                </div>
+                
+                <!-- Tombol dengan Animasi Loading -->
+                <button onclick="login()" class="btn btn-primary btn-lg w-100 fw-bold" id="btnLogin" style="background-color: #0056b3; border:none;">
+                    <span id="btnText">Masuk & Cari Data</span>
+                    <span id="btnSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                </button>
+                
+                <div id="pesanError" class="text-danger mt-3 text-center fw-semibold"></div>
             </div>
         </div>
     </div>
 
-    <!-- HALAMAN DATA (Disembunyikan sebelum login) -->
-    <div id="halamanData">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h3>Data Hasil Kerja Anda</h3>
-            <button onclick="logout()" class="btn btn-danger">Keluar</button>
+    <!-- HALAMAN DATA HASIL PENCARIAN -->
+    <div id="halamanData" class="fade-in">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4">
+            <div>
+                <h3 class="fw-bold m-0" style="color: #2c3e50;">Data Hasil Kerja</h3>
+                <p class="text-muted m-0" id="infoKaryawan"></p>
+            </div>
+            <button onclick="logout()" class="btn btn-outline-danger mt-3 mt-md-0 fw-bold px-4">Keluar</button>
         </div>
         
-        <div class="card p-3 overflow-auto">
-            <table class="table table-bordered table-striped">
-                <thead>
-                    <tr>
-                        <th>DATE</th>
-                        <th>NRP</th>
-                        <th>NAMA KARYAWAN</th>
-                        <th>SETTINGAN</th>
-                        <th>KODE Shift (1)</th>
-                        <th>NO UNIT</th>
-                        <th>HM AWAL</th>
-                        <th>HM AKHIR</th>
-                        <th>HM TOTAL</th>
-                        <th>KET</th>
-                    </tr>
-                </thead>
-                <tbody id="isiTabel">
-                    <!-- Data akan muncul di sini otomatis -->
-                </tbody>
-                <tfoot>
-                    <tr class="table-dark">
-                        <th colspan="8" class="text-end">JUMLAH TOTAL HM:</th>
-                        <th id="totalHmBawah" style="color: #ffeb3b; font-size: 18px;">0</th>
-                        <th></th>
-                    </tr>
-                </tfoot>
-            </table>
+        <div class="card p-0 overflow-hidden">
+            <div class="table-container">
+                <table class="table table-bordered mb-0">
+                    <thead>
+                        <tr>
+                            <th>DATE</th>
+                            <th>NRP</th>
+                            <th>NAMA KARYAWAN</th>
+                            <th>SETTINGAN</th>
+                            <th>KODE Shift (1)</th>
+                            <th>NO UNIT</th>
+                            <th>HM AWAL</th>
+                            <th>HM AKHIR</th>
+                            <th>HM TOTAL</th>
+                            <th>KET</th>
+                        </tr>
+                    </thead>
+                    <tbody id="isiTabel">
+                        <!-- Data dimasukkan oleh JavaScript -->
+                    </tbody>
+                    <tfoot>
+                        <!-- Baris Total yang sudah diperbaiki warnanya -->
+                        <tr class="row-total">
+                            <th colspan="8" class="text-end">JUMLAH TOTAL HM:</th>
+                            <th id="totalHmBawah">0</th>
+                            <th></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
         </div>
     </div>
 
 </div>
 
 <script>
-    // GANTI TULISAN DI BAWAH INI DENGAN URL DARI GOOGLE APPS SCRIPT (TAHAP 2)
+    // ⚠️ PENTING: GANTI TULISAN DI BAWAH DENGAN URL APPS SCRIPT ANDA DARI TAHAP 2
     const urlGoogleScript = "https://script.google.com/macros/s/AKfycby_UBuuUA1oJ-tWS05-R9hxRzVqplggogpLJHwz1XYGTj3LB-bH8Z-12mjtOyizsRPz/exec";
 
     function login() {
         const nrp = document.getElementById("inputNrp").value;
         const tglLahir = document.getElementById("inputTglLahir").value;
         const pesan = document.getElementById("pesanError");
+        
+        // Elemen Tombol
         const btn = document.getElementById("btnLogin");
+        const btnText = document.getElementById("btnText");
+        const btnSpinner = document.getElementById("btnSpinner");
 
         if(!nrp || !tglLahir) {
-            pesan.innerText = "NRP dan Tanggal Lahir harus diisi!";
+            pesan.innerText = "NRP dan Tanggal Lahir tidak boleh kosong!";
             return;
         }
 
+        // Tampilan Mode Loading
         pesan.innerText = "";
-        btn.innerText = "Mencari Data...";
+        btnText.innerText = " Memproses...";
+        btnSpinner.classList.remove("d-none"); // Munculkan roda berputar
         btn.disabled = true;
 
-        // Meminta data ke Google Script
+        // Proses Tarik Data
         fetch(`${urlGoogleScript}?nrp=${nrp}&tglLahir=${tglLahir}`)
             .then(response => response.json())
             .then(hasil => {
-                btn.innerText = "Masuk & Cari Data";
+                // Kembalikan tombol ke keadaan semula
+                btnText.innerText = "Masuk & Cari Data";
+                btnSpinner.classList.add("d-none");
                 btn.disabled = false;
 
                 if (hasil.status === 'sukses') {
@@ -109,15 +201,19 @@
                 }
             })
             .catch(error => {
-                btn.innerText = "Masuk & Cari Data";
+                btnText.innerText = "Masuk & Cari Data";
+                btnSpinner.classList.add("d-none");
                 btn.disabled = false;
-                pesan.innerText = "Terjadi kesalahan koneksi internet.";
+                pesan.innerText = "Gagal terhubung ke server. Periksa koneksi internet Anda.";
             });
     }
 
     function tampilkanData(data, totalHm) {
         document.getElementById("halamanLogin").style.display = "none";
         document.getElementById("halamanData").style.display = "block";
+        
+        // Tampilkan Nama & NRP di header
+        document.getElementById("infoKaryawan").innerText = `NRP: ${data[0].nrp} | Nama: ${data[0].nama}`;
         
         let barisTabel = "";
         data.forEach(item => {
@@ -142,11 +238,17 @@
     }
 
     function logout() {
-        document.getElementById("halamanLogin").style.display = "flex";
         document.getElementById("halamanData").style.display = "none";
+        
+        // Tampilkan kembali login dengan animasi halus
+        const halLogin = document.getElementById("halamanLogin");
+        halLogin.style.display = "flex";
+        
+        // Hapus isian lama
         document.getElementById("inputNrp").value = "";
         document.getElementById("inputTglLahir").value = "";
         document.getElementById("isiTabel").innerHTML = "";
+        document.getElementById("pesanError").innerText = "";
     }
 </script>
 </body>

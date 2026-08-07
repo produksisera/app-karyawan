@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portal Karyawan - Cek Data HM</title>
+    <title>Portal Karyawan - Prodsera</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -12,132 +12,104 @@
         body { 
             background-color: #f0f2f5; 
             font-family: 'Poppins', sans-serif;
-            padding-top: 5vh; 
-            padding-bottom: 5vh;
         }
         
-        .card { 
-            border-radius: 15px; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.08); 
-            border: none;
-        }
+        /* Desain Navbar (Menu Atas) */
+        .navbar-custom { background-color: #1a252f; padding: 15px 0; }
+        .navbar-brand { font-weight: 700; color: #ffde00 !important; font-size: 1.5rem; }
+        .nav-link { font-weight: 500; color: #ffffff !important; margin: 0 5px; border-radius: 5px; transition: 0.3s; }
+        .nav-link:hover, .nav-link.active { background-color: #ffde00; color: #000000 !important; }
         
-        .table-container {
-            max-height: 65vh; 
-            overflow-y: auto;
-            border-radius: 8px;
-            box-shadow: inset 0 0 5px rgba(0,0,0,0.05);
-        }
-        .table thead th { 
-            background-color: #2c3e50; 
-            color: #ffffff; 
-            text-align: center; 
-            position: sticky; 
-            top: 0; 
-            z-index: 1;
-            white-space: nowrap;
-        }
-        .table td { 
-            text-align: center; 
-            vertical-align: middle; 
-            white-space: nowrap;
-        }
+        .card { border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: none; }
+        .table-container { max-height: 65vh; overflow-y: auto; border-radius: 8px; box-shadow: inset 0 0 5px rgba(0,0,0,0.05); }
+        .table thead th { background-color: #2c3e50; color: #ffffff; text-align: center; position: sticky; top: 0; z-index: 1; white-space: nowrap; }
+        .table td { text-align: center; vertical-align: middle; white-space: nowrap; }
+        .table tbody tr:hover { background-color: #e2e6ea !important; transform: scale(1.01); }
         
-        .table tbody tr {
-            transition: all 0.2s ease;
-        }
-        .table tbody tr:hover {
-            background-color: #e2e6ea !important;
-            transform: scale(1.01);
-        }
-        
-        /* PERBAIKAN: Menghapus efek sticky di bawah agar tidak menutupi data */
-        .row-total {
-            background-color: #ffde00 !important; 
-        }
-        .row-total th {
-            background-color: transparent !important;
-            color: #000000 !important; 
-            font-weight: 700;
-            font-size: 1.1rem;
-        }
+        .row-total { background-color: #ffde00 !important; }
+        .row-total th { background-color: transparent !important; color: #000000 !important; font-weight: 700; font-size: 1.1rem; }
 
-        .fade-in {
-            animation: fadeIn 0.5s ease-in-out;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(15px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
         
-        #halamanData { display: none; }
+        #halamanData, #loadingData { display: none; }
+        .login-container { padding-top: 10vh; }
     </style>
 </head>
 <body>
 
+<!-- MENU NAVIGASI (Disembunyikan sebelum login) -->
+<nav class="navbar navbar-expand-lg navbar-custom d-none" id="menuNav">
+    <div class="container">
+        <a class="navbar-brand" href="#">PORTAL PRODSERA</a>
+        <button class="navbar-toggler bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0" id="daftarMenu">
+                <li class="nav-item"><a class="nav-link active" href="#" onclick="muatData('HM', this)">Data HM</a></li>
+                <li class="nav-item"><a class="nav-link" href="#" onclick="muatData('INSENTIF', this)">Insentif</a></li>
+                <li class="nav-item"><a class="nav-link" href="#" onclick="muatData('ABSEN', this)">Absen</a></li>
+                <li class="nav-item"><a class="nav-link" href="#" onclick="muatData('CTN', this)">Sisa CTN</a></li>
+            </ul>
+            <div class="d-flex align-items-center">
+                <span class="text-light me-3 fw-bold" id="infoKaryawanNav"></span>
+                <button class="btn btn-danger btn-sm fw-bold px-3" onclick="logout()">Keluar</button>
+            </div>
+        </div>
+    </div>
+</nav>
+
 <div class="container fade-in">
     
-    <div class="row justify-content-center" id="halamanLogin">
+    <!-- HALAMAN LOGIN -->
+    <div class="row justify-content-center login-container" id="halamanLogin">
         <div class="col-md-6 col-lg-5">
             <div class="card p-4 p-md-5">
                 <div class="text-center mb-4">
-                    <h3 class="fw-bold" style="color: #2c3e50;">Portal Karyawan</h3>
-                    <p class="text-muted">Masukkan kredensial Anda untuk melihat data HM</p>
+                    <h3 class="fw-bold" style="color: #2c3e50;">Masuk Akun</h3>
+                    <p class="text-muted">Gunakan NRP dan Tanggal Lahir</p>
                 </div>
                 
                 <div class="mb-3">
                     <label class="fw-semibold mb-1">NRP</label>
-                    <input type="number" id="inputNrp" class="form-control form-control-lg" placeholder="Contoh: 01112345">
+                    <input type="number" id="inputNrp" class="form-control form-control-lg" placeholder="Contoh: 80012696">
                 </div>
                 <div class="mb-4">
                     <label class="fw-semibold mb-1">Tanggal Lahir</label>
-                    <input type="number" id="inputTglLahir" class="form-control form-control-lg" placeholder="Contoh: 170845">
+                    <input type="text" id="inputTglLahir" class="form-control form-control-lg" placeholder="Contoh: 020196">
                 </div>
                 
                 <button onclick="login()" class="btn btn-primary btn-lg w-100 fw-bold" id="btnLogin" style="background-color: #0056b3; border:none;">
-                    <span id="btnText">Masuk & Cari Data</span>
-                    <span id="btnSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                    <span id="btnText">Masuk Portal</span>
+                    <span id="btnSpinner" class="spinner-border spinner-border-sm d-none"></span>
                 </button>
-                
                 <div id="pesanError" class="text-danger mt-3 text-center fw-semibold"></div>
             </div>
         </div>
     </div>
 
-    <div id="halamanData" class="fade-in">
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4">
-            <div>
-                <h3 class="fw-bold m-0" style="color: #2c3e50;">Data HM</h3>
-                <p class="text-muted m-0" id="infoKaryawan"></p>
-            </div>
-            <button onclick="logout()" class="btn btn-outline-danger mt-3 mt-md-0 fw-bold px-4">Keluar</button>
-        </div>
+    <!-- TAMPILAN LOADING SAAT PINDAH MENU -->
+    <div id="loadingData" class="text-center mt-5">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
+        <h4 class="mt-3 text-muted">Mengambil data dari server...</h4>
+    </div>
+
+    <!-- HALAMAN DATA HASIL PENCARIAN -->
+    <div id="halamanData" class="mt-4 fade-in">
+        <h3 class="fw-bold mb-3" style="color: #2c3e50;" id="judulHalaman">Data HM</h3>
         
         <div class="card p-0 overflow-hidden">
             <div class="table-container">
                 <table class="table table-bordered mb-0">
-                    <thead>
-                        <tr>
-                            <th>DATE</th>
-                            <th>NRP</th>
-                            <th>NAMA KARYAWAN</th>
-                            <th>SETTINGAN</th>
-                            <th>KODE Shift (1)</th>
-                            <th>NO UNIT</th>
-                            <th>HM AWAL</th>
-                            <th>HM AKHIR</th>
-                            <th>HM TOTAL</th>
-                            <th>KET</th>
-                        </tr>
+                    <thead id="tabelHeader">
+                        <!-- Judul Kolom otomatis dibuat di sini -->
                     </thead>
-                    <tbody id="isiTabel">
+                    <tbody id="tabelBody">
+                        <!-- Isi Data otomatis dibuat di sini -->
                     </tbody>
-                    <tfoot>
-                        <tr class="row-total">
-                            <th colspan="8" class="text-end">JUMLAH TOTAL HM:</th>
-                            <th id="totalHmBawah">0</th>
-                            <th></th>
-                        </tr>
+                    <tfoot id="tabelFooter">
+                        <!-- Baris Total khusus untuk HM akan muncul di sini -->
                     </tfoot>
                 </table>
             </div>
@@ -146,95 +118,189 @@
 
 </div>
 
+<!-- Script Bootstrap untuk Navbar (Dropdown di HP) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
-    // ⚠️ MASUKKAN KEMBALI URL APPS SCRIPT ANDA DI SINI
+    // ⚠️ MASUKKAN URL APPS SCRIPT BARU ANDA DI SINI
     const urlGoogleScript = "https://script.google.com/macros/s/AKfycby_UBuuUA1oJ-tWS05-R9hxRzVqplggogpLJHwz1XYGTj3LB-bH8Z-12mjtOyizsRPz/exec";
+
+    // Menyimpan data sesi login agar tidak perlu ketik ulang saat pindah menu
+    let sesiNrp = "";
+    let sesiTglLahir = "";
 
     function login() {
         const nrp = document.getElementById("inputNrp").value;
         const tglLahir = document.getElementById("inputTglLahir").value;
         const pesan = document.getElementById("pesanError");
-        
-        const btn = document.getElementById("btnLogin");
         const btnText = document.getElementById("btnText");
         const btnSpinner = document.getElementById("btnSpinner");
+        const btn = document.getElementById("btnLogin");
 
         if(!nrp || !tglLahir) {
-            pesan.innerText = "NRP dan Tanggal Lahir tidak boleh kosong!";
-            return;
+            pesan.innerText = "NRP dan Tanggal Lahir tidak boleh kosong!"; return;
         }
 
         pesan.innerText = "";
-        btnText.innerText = " Memproses...";
+        btnText.innerText = " Memeriksa Kredensial...";
         btnSpinner.classList.remove("d-none");
         btn.disabled = true;
 
-        fetch(`${urlGoogleScript}?nrp=${nrp}&tglLahir=${tglLahir}`)
+        // Cek login dengan memanggil data HM terlebih dahulu
+        fetch(`${urlGoogleScript}?nrp=${nrp}&tglLahir=${tglLahir}&jenis=HM`)
             .then(response => response.json())
             .then(hasil => {
-                btnText.innerText = "Masuk & Cari Data";
+                btnText.innerText = "Masuk Portal";
                 btnSpinner.classList.add("d-none");
                 btn.disabled = false;
 
                 if (hasil.status === 'sukses') {
-                    tampilkanData(hasil.data, hasil.total_semua);
+                    if (hasil.data.length > 0) {
+                        // Jika berhasil, simpan sesi dan buka halaman Dashboard (Data HM)
+                        sesiNrp = nrp;
+                        sesiTglLahir = tglLahir;
+                        
+                        document.getElementById("halamanLogin").style.display = "none";
+                        document.getElementById("menuNav").classList.remove("d-none");
+                        document.getElementById("infoKaryawanNav").innerText = `NRP: ${nrp}`;
+                        
+                        // Menampilkan data yang baru saja ditarik
+                        tampilkanTabelDinamis('Data HM', hasil.headers, hasil.data, 'HM');
+                    } else {
+                        pesan.innerText = "Kredensial salah atau Data HM Anda kosong.";
+                    }
                 } else {
                     pesan.innerText = hasil.pesan;
                 }
             })
             .catch(error => {
-                btnText.innerText = "Masuk & Cari Data";
+                btnText.innerText = "Masuk Portal";
                 btnSpinner.classList.add("d-none");
                 btn.disabled = false;
-                pesan.innerText = "Gagal terhubung ke server. Periksa koneksi internet Anda.";
+                pesan.innerText = "Gagal terhubung. Periksa koneksi internet Anda.";
             });
     }
 
-    function tampilkanData(data, totalHm) {
-        document.getElementById("halamanLogin").style.display = "none";
-        document.getElementById("halamanData").style.display = "block";
-        
-        document.getElementById("infoKaryawan").innerText = `NRP: ${data[0].nrp} | Nama: ${data[0].nama}`;
-        
-        let barisTabel = "";
-        data.forEach(item => {
-            
-            // PERBAIKAN: Format ulang kolom "Ket"
-            let teksKet = String(item.ket).trim();
-            // Jika berisi "0", "0:00", "00:00", atau kode waktu error (1899), maka dikosongkan
-            if (teksKet === "0" || teksKet === "0:00" || teksKet === "00:00" || teksKet.includes("1899") || teksKet === "") {
-                teksKet = ""; 
-            }
+    function muatData(jenisData, elemenMenu) {
+        // Mengubah warna tombol menu yang aktif
+        const semuaMenu = document.querySelectorAll('.nav-link');
+        semuaMenu.forEach(menu => menu.classList.remove('active'));
+        if (elemenMenu) elemenMenu.classList.add('active');
 
-            barisTabel += `
-                <tr>
-                    <td>${item.date}</td>
-                    <td>${item.nrp}</td>
-                    <td>${item.nama}</td>
-                    <td>${item.settingan}</td>
-                    <td>${item.kodeShift}</td>
-                    <td>${item.noUnit}</td>
-                    <td>${item.hmAwal}</td>
-                    <td>${item.hmAkhir}</td>
-                    <td><strong>${item.hmTotal}</strong></td>
-                    <td>${teksKet}</td>
-                </tr>
-            `;
-        });
+        // Ganti judul
+        let judul = "Data " + jenisData;
+        if(jenisData === 'CTN') judul = "Data Sisa CTN";
+        else if (jenisData === 'INSENTIF') judul = "Data Insentif Tambahan";
+
+        // Sembunyikan data lama, tampilkan loading
+        document.getElementById("halamanData").style.display = "none";
+        document.getElementById("loadingData").style.display = "block";
+
+        fetch(`${urlGoogleScript}?nrp=${sesiNrp}&tglLahir=${sesiTglLahir}&jenis=${jenisData}`)
+            .then(response => response.json())
+            .then(hasil => {
+                document.getElementById("loadingData").style.display = "none";
+                
+                if (hasil.status === 'sukses') {
+                    tampilkanTabelDinamis(judul, hasil.headers, hasil.data, jenisData);
+                } else {
+                    alert("Error: " + hasil.pesan);
+                    document.getElementById("halamanData").style.display = "block";
+                }
+            })
+            .catch(error => {
+                document.getElementById("loadingData").style.display = "none";
+                alert("Gagal mengambil data dari server.");
+            });
+    }
+
+    function tampilkanTabelDinamis(judul, headers, data, jenisData) {
+        document.getElementById("halamanData").style.display = "block";
+        document.getElementById("judulHalaman").innerText = judul;
         
-        document.getElementById("isiTabel").innerHTML = barisTabel;
-        document.getElementById("totalHmBawah").innerText = totalHm;
+        const thead = document.getElementById("tabelHeader");
+        const tbody = document.getElementById("tabelBody");
+        const tfoot = document.getElementById("tabelFooter");
+        
+        // 1. BUAT JUDUL KOLOM OTOMATIS
+        let barisHeader = "<tr>";
+        let indexHmTotal = -1; // Untuk melacak posisi kolom HM TOTAL jika ada
+        
+        headers.forEach((namaKolom, index) => {
+            barisHeader += `<th>${namaKolom}</th>`;
+            // Cek jika ini adalah kolom "HM TOTAL"
+            if (namaKolom.toString().toUpperCase().trim() === "HM TOTAL") {
+                indexHmTotal = index;
+            }
+        });
+        barisHeader += "</tr>";
+        thead.innerHTML = barisHeader;
+
+        // 2. BUAT ISI TABEL OTOMATIS
+        let barisBody = "";
+        let totalNilaiHm = 0;
+
+        if (data.length === 0) {
+            barisBody = `<tr><td colspan="${headers.length}" class="text-center py-4">Belum ada data untuk Anda di tabel ini.</td></tr>`;
+        } else {
+            data.forEach(baris => {
+                barisBody += "<tr>";
+                baris.forEach((sel, index) => {
+                    let teksSel = String(sel).trim();
+                    // Hilangkan nilai "0" atau format waktu error pada kolom "KET"
+                    let judulKolom = headers[index].toString().toUpperCase();
+                    if (judulKolom.includes("KET") && (teksSel === "0" || teksSel === "0:00" || teksSel === "00:00" || teksSel.includes("1899"))) {
+                        teksSel = "";
+                    }
+                    
+                    // Hitung jumlah HM Total
+                    if (index === indexHmTotal) {
+                        let angka = parseFloat(teksSel);
+                        if (!isNaN(angka)) totalNilaiHm += angka;
+                        barisBody += `<td><strong>${teksSel}</strong></td>`;
+                    } else {
+                        barisBody += `<td>${teksSel}</td>`;
+                    }
+                });
+                barisBody += "</tr>";
+            });
+        }
+        tbody.innerHTML = barisBody;
+
+        // 3. BUAT FOOTER (Hanya jika ada kolom HM TOTAL)
+        if (indexHmTotal !== -1 && data.length > 0) {
+            let barisFooter = "<tr class='row-total'>";
+            for (let i = 0; i < headers.length; i++) {
+                if (i === indexHmTotal - 1) {
+                    barisFooter += `<th class="text-end">JUMLAH TOTAL:</th>`;
+                } else if (i === indexHmTotal) {
+                    barisFooter += `<th>${totalNilaiHm}</th>`;
+                } else {
+                    barisFooter += `<th></th>`;
+                }
+            }
+            barisFooter += "</tr>";
+            tfoot.innerHTML = barisFooter;
+        } else {
+            tfoot.innerHTML = ""; // Kosongkan footer jika tidak ada HM Total
+        }
     }
 
     function logout() {
+        sesiNrp = "";
+        sesiTglLahir = "";
+        document.getElementById("menuNav").classList.add("d-none");
         document.getElementById("halamanData").style.display = "none";
-        const halLogin = document.getElementById("halamanLogin");
-        halLogin.style.display = "flex";
+        document.getElementById("loadingData").style.display = "none";
+        document.getElementById("halamanLogin").style.display = "flex";
         
         document.getElementById("inputNrp").value = "";
         document.getElementById("inputTglLahir").value = "";
-        document.getElementById("isiTabel").innerHTML = "";
         document.getElementById("pesanError").innerText = "";
+        
+        // Reset warna menu ke awal
+        document.querySelectorAll('.nav-link').forEach(m => m.classList.remove('active'));
+        document.querySelector('.nav-link').classList.add('active'); // Menu HM aktif pertama
     }
 </script>
 </body>

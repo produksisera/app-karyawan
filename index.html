@@ -19,12 +19,12 @@
         .card { border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: none; }
         .table-container { max-height: 65vh; overflow-y: auto; border-radius: 8px; box-shadow: inset 0 0 5px rgba(0,0,0,0.05); }
         
-        /* Desain Tabel (Gaya Laporan) */
+        /* Desain Tabel Utama */
         .table thead th { background-color: #ffffff; color: #000000; text-align: center; position: sticky; top: 0; z-index: 1; border: 2px solid #000 !important; white-space: nowrap; }
         .table tbody td { text-align: center; vertical-align: middle; white-space: nowrap; border: 1px solid #000 !important; }
         .table tbody tr:hover { background-color: #e2e6ea !important; }
         
-        /* Tema Gelap untuk HM & CTN */
+        /* Tema Gelap untuk HM, Absen, dan CTN */
         .header-gelap thead th { background-color: #2c3e50 !important; color: #ffffff !important; border: 1px solid #dee2e6 !important; }
         .header-gelap tbody td { border: 1px solid #dee2e6 !important; }
 
@@ -177,7 +177,8 @@
         document.getElementById("judulHalaman").innerText = judul;
         
         const tabelUtama = document.getElementById("tabelUtama");
-        if (jenisData === 'INSENTIF' || jenisData === 'ABSEN') tabelUtama.classList.remove("header-gelap");
+        // Tabel Insentif menggunakan desain border hitam putih
+        if (jenisData === 'INSENTIF') tabelUtama.classList.remove("header-gelap");
         else tabelUtama.classList.add("header-gelap");
 
         const thead = document.getElementById("tabelHeader");
@@ -185,12 +186,12 @@
         const tfoot = document.getElementById("tabelFooter");
         
         // -------------------------------------------------------------
-        // BLOK 1: LOGIKA KHUSUS UNTUK DATA ABSEN (67 KOLOM DIUBAH KE BAWAH)
+        // BLOK 1: LOGIKA KHUSUS UNTUK DATA INSENTIF (67 KOLOM DIUBAH KE BAWAH)
         // -------------------------------------------------------------
-        if (jenisData === 'ABSEN') {
+        if (jenisData === 'INSENTIF') {
             thead.innerHTML = `<tr>
                 <th style="background-color: #fff; color: #000; border: 2px solid #000 !important;">TANGGAL</th>
-                <th style="background-color: #fff; color: #000; border: 2px solid #000 !important;">STATUS ABSEN</th>
+                <th style="background-color: #fff; color: #000; border: 2px solid #000 !important;">PEROLEHAN INSENTIF</th>
                 <th style="background-color: #fff; color: #000; border: 2px solid #000 !important;">KETERANGAN</th>
             </tr>`;
             
@@ -198,22 +199,24 @@
             if (data.length === 0) {
                 barisBody = `<tr><td colspan="3">Data kosong</td></tr>`;
             } else {
-                let dt = data[0]; // Hanya ambil 1 baris karena 1 karyawan = 1 baris
+                let dt = data[0]; // 1 baris data karyawan untuk 67 kolom
                 
-                // Looping 31 Hari (Index ke 2 sampai 32)
+                // Looping 31 Hari (Index ke-2 (01 Jul) sampai ke-32 (31 Jul))
                 for(let i = 2; i <= 32; i++) { 
                     let tgl = headers[i];
                     if(tgl && String(tgl).trim() !== "") {
-                        let status = String(dt[i]).trim();
-                        if(status === "0" || status === "") status = "-";
+                        let insentif = String(dt[i]).trim();
+                        // Jika kosong atau 0, sesuaikan agar rapi
+                        if(insentif === "" || insentif === "0") insentif = "-";
                         
-                        let ketIndex = i + 32; // KET mulai dari index ke 34
+                        // Keterangan mulai dari Index ke-34 (KET1) sampai ke-64 (KET31)
+                        let ketIndex = i + 32; 
                         let ket = String(dt[ketIndex]).trim();
                         if(ket === "0" || ket === "" || ket.includes("1899")) ket = "-";
 
                         barisBody += `<tr>
                             <td style="border: 1px solid #000;">${tgl}</td>
-                            <td style="border: 1px solid #000;"><strong>${status}</strong></td>
+                            <td style="border: 1px solid #000;">${insentif}</td>
                             <td style="border: 1px solid #000;">${ket}</td>
                         </tr>`;
                     }
@@ -221,31 +224,31 @@
             }
             tbody.innerHTML = barisBody;
 
-            // Total dan Rapel (Index ke 33 dan 65)
+            // Footer untuk Total & Rapel (Index 33 adalah Total, Index 65 adalah Rapel)
             if (data.length > 0) {
                 let dt = data[0];
                 tfoot.innerHTML = `
                     <tr><td colspan="3" style="border: none !important; height: 30px;"></td></tr>
                     <tr class="row-total">
-                        <th colspan="2" class="text-end" style="border: 2px solid #000 !important;">TOTAL ABSEN</th>
+                        <th colspan="2" class="text-end" style="border: 2px solid #000 !important;">TOTAL</th>
                         <th class="text-center" style="border: 2px solid #000 !important;">${String(dt[33]).trim()}</th>
                     </tr>
                     <tr>
-                        <th colspan="2" class="text-end" style="background-color: #fff !important; color: #000 !important; border: 2px solid #000 !important;">RAPEL</th>
+                        <th colspan="2" class="text-end" style="background-color: #fff !important; color: #000 !important; border: 2px solid #000 !important;">${String(headers[65]).trim()}</th>
                         <th class="text-center" style="background-color: #fff !important; color: #000 !important; border: 2px solid #000 !important;">${String(dt[65]).trim()}</th>
                     </tr>
                 `;
             } else {
                 tfoot.innerHTML = "";
             }
-            return; // Hentikan eksekusi kode di bawah agar tidak tumpang tindih
+            return; // Hentikan di sini agar tidak memproses Blok 2
         }
 
         // -------------------------------------------------------------
-        // BLOK 2: LOGIKA UMUM UNTUK HM, CTN, DAN INSENTIF 
+        // BLOK 2: LOGIKA UMUM UNTUK HM, ABSEN, DAN CTN
         // -------------------------------------------------------------
         let indeksSembunyi = [];
-        let indexHmTotal = -1, indexRapel = -1, namaRapel = "", nilaiRapel = "";
+        let indexHmTotal = -1;
         let barisHeader = "<tr>";
         let jumlahKolomTampil = 0;
 
@@ -253,18 +256,9 @@
             let judulKolom = namaKolom.toString().toUpperCase().trim();
             if (judulKolom === "TGL LAHIR" || judulKolom === "TANGGAL LAHIR") {
                 indeksSembunyi.push(index);
-            } else if (jenisData === 'INSENTIF') {
-                if (judulKolom === "NRP") {
-                    indeksSembunyi.push(index);
-                } else if (judulKolom.includes("RAPEL")) {
-                    indeksSembunyi.push(index); 
-                    indexRapel = index;
-                    namaRapel = namaKolom;
-                } else {
-                    barisHeader += `<th>${namaKolom}</th>`; jumlahKolomTampil++;
-                }
             } else {
-                barisHeader += `<th>${namaKolom}</th>`; jumlahKolomTampil++;
+                barisHeader += `<th>${namaKolom}</th>`; 
+                jumlahKolomTampil++;
                 if (judulKolom === "HM TOTAL") indexHmTotal = index;
             }
         });
@@ -277,20 +271,25 @@
         if (data.length === 0) {
             barisBody = `<tr><td colspan="${jumlahKolomTampil}" class="text-center py-4">Belum ada data.</td></tr>`;
         } else {
-            if (indexRapel !== -1) nilaiRapel = data[0][indexRapel];
             data.forEach(baris => {
                 barisBody += "<tr>";
                 baris.forEach((sel, index) => {
                     if (!indeksSembunyi.includes(index)) {
                         let teksSel = String(sel).trim();
                         let judulKolom = headers[index].toString().toUpperCase();
-                        if (judulKolom.includes("KET") && (teksSel === "0" || teksSel === "0:00" || teksSel === "00:00" || teksSel.includes("1899"))) teksSel = "-";
+                        
+                        // Pembersihan teks KET atau 0
+                        if ((judulKolom.includes("KET") || judulKolom.includes("STATUS")) && (teksSel === "0" || teksSel === "0:00" || teksSel === "00:00" || teksSel.includes("1899"))) {
+                            teksSel = "-";
+                        }
                         
                         if (index === indexHmTotal) {
                             let angka = parseFloat(teksSel);
                             if (!isNaN(angka)) totalNilaiHm += angka;
                             barisBody += `<td><strong>${teksSel}</strong></td>`;
-                        } else barisBody += `<td>${teksSel}</td>`;
+                        } else {
+                            barisBody += `<td>${teksSel}</td>`;
+                        }
                     }
                 });
                 barisBody += "</tr>";
@@ -307,17 +306,11 @@
                     else barisFooter += `<th></th>`;
                 }
             });
-            barisFooter += "</tr>"; tfoot.innerHTML = barisFooter;
-        } else if (jenisData === 'INSENTIF' && indexRapel !== -1 && data.length > 0) {
-            let spanKiri = jumlahKolomTampil > 1 ? jumlahKolomTampil - 1 : 1;
-            tfoot.innerHTML = `
-                <tr><td colspan="${jumlahKolomTampil}" style="border: none !important; background: transparent; height: 40px;"></td></tr>
-                <tr>
-                    <th colspan="${spanKiri}" class="text-center" style="background-color: #fff !important; color: #000 !important; border: 2px solid #000 !important;">${namaRapel}</th>
-                    <th class="text-center" style="background-color: #fff !important; color: #000 !important; border: 2px solid #000 !important;">${nilaiRapel}</th>
-                </tr>
-            `;
-        } else tfoot.innerHTML = "";
+            barisFooter += "</tr>"; 
+            tfoot.innerHTML = barisFooter;
+        } else {
+            tfoot.innerHTML = "";
+        }
     }
 
     function logout() { location.reload(); }

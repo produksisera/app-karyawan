@@ -93,7 +93,14 @@
     </div>
 
     <div id="halamanData" class="mt-4 fade-in">
-        <h3 class="fw-bold mb-3" style="color: #2c3e50;" id="judulHalaman">Data HM</h3>
+        <!-- HEADER HALAMAN & DROPDOWN FILTER -->
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3">
+            <h3 class="fw-bold mb-2 mb-md-0" style="color: #2c3e50;" id="judulHalaman">Data HM</h3>
+            <select id="filterBulan" class="form-select w-auto d-none shadow-sm border-dark fw-semibold" onchange="terapkanFilter()">
+                <option value="SEMUA">Semua Bulan</option>
+            </select>
+        </div>
+
         <div class="card p-0 overflow-hidden">
             <div class="table-container">
                 <table class="table mb-0 header-gelap" id="tabelUtama">
@@ -114,6 +121,11 @@
 
     let sesiNrp = "";
     let sesiTglLahir = "";
+    
+    // Variabel Global
+    window.dataAsli = [];
+    window.headersAsli = [];
+    window.jenisDataAktif = "";
 
     function login() {
         const nrp = document.getElementById("inputNrp").value;
@@ -141,13 +153,17 @@
                     document.getElementById("halamanLogin").style.display = "none";
                     document.getElementById("menuNav").classList.remove("d-none");
                     
-                    // MENAMPILKAN NAMA KARYAWAN DI POJOK KANAN ATAS
                     let nama = hasil.nama ? hasil.nama : "";
                     document.getElementById("infoKaryawanNav").innerText = `Halo, ${nama} (${nrp})`;
                     
+                    window.dataAsli = hasil.data;
+                    window.headersAsli = hasil.headers;
+                    window.jenisDataAktif = 'HM';
+
+                    setupDropdownBulan(hasil.headers, hasil.data);
                     tampilkanTabelDinamis('Data HM', hasil.headers, hasil.data, 'HM');
                 } else {
-                    pesan.innerText = hasil.pesan; // Menampilkan pesan error dari Google Script jika gagal
+                    pesan.innerText = hasil.pesan; 
                 }
             }).catch(error => {
                 document.getElementById("btnText").innerText = "Masuk Portal";
@@ -167,14 +183,130 @@
 
         document.getElementById("halamanData").style.display = "none";
         document.getElementById("loadingData").style.display = "block";
+        document.getElementById("filterBulan").classList.add("d-none"); 
 
         fetch(`${urlGoogleScript}?nrp=${sesiNrp}&tglLahir=${sesiTglLahir}&jenis=${jenisData}`)
             .then(response => response.json())
             .then(hasil => {
                 document.getElementById("loadingData").style.display = "none";
-                if (hasil.status === 'sukses') tampilkanTabelDinamis(judul, hasil.headers, hasil.data, jenisData);
+                if (hasil.status === 'sukses') {
+                    window.dataAsli = hasil.data;
+                    window.headersAsli = hasil.headers;
+                    window.jenisDataAktif = jenisData;
+
+                    setupDropdownBulan(hasil.headers, hasil.data);
+                    tampilkanTabelDinamis(judul, hasil.headers, hasil.data, jenisData);
+                }
                 else { alert("Error: " + hasil.pesan); document.getElementById("halamanData").style.display = "block"; }
             }).catch(error => { document.getElementById("loadingData").style.display = "none"; alert("Gagal mengambil data."); });
+    }
+
+    // --- FUNGSI BARU: Mengubah format tanggal tampil ---
+    function formatTanggalTampil(tglString) {
+        if (!tglString) return "";
+        let str = String(tglString).trim();
+        
+        // Cek jika formatnya MM/DD/YY atau MM/DD/YYYY (contoh: 08/01/26 -> 1 Agustus 2026)
+        let regexBulanHariTahun = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/;
+        let match = str.match(regexBulanHariTahun);
+        
+        if (match) {
+            let bulan = match[1].padStart(2, '0'); // Mengambil bulan
+            let hari = match[2].padStart(2, '0');  // Mengambil hari
+            let tahun = match[3];
+            if (tahun.length === 4) tahun = tahun.slice(-2); // Potong jadi 2 digit terakhir (2026 -> 26)
+            
+            return `${hari}/${bulan}/${tahun}`; // Hasil akhir: DD/MM/YY (01/08/26)
+        }
+        
+        // Cek jika Apps Script mengirimkan string waktu Date bawaan sistem: "2026-08-01T..."
+        if (str.includes("-") && str.includes("T") && str.includes("Z")) {
+            let d = new Date(str);
+            if (!isNaN(d.getTime())) {
+                let hari = d.getDate().toString().padStart(2, '0');
+                let bulan = (d.getMonth() + 1).toString().padStart(2, '0');
+                let tahun = d.getFullYear().toString().slice(-2);
+                return `${hari}/${bulan}/${tahun}`;
+            }
+        }
+        
+        return str; // Kembalikan bentuk aslinya jika tidak terdeteksi butuh diubah (misal sudah 1-Aug-26)
+    }
+
+    function ekstrakBulanTahun(tglStr) {
+        if (!tglStr) return "";
+        let str = String(tglStr).trim();
+
+        let parts = str.split('-');
+        if (parts.length === 3 && isNaN(parts[1])) {
+            return parts[1] + '-' + parts[2]; 
+        }
+
+        let d = new Date(str);
+        if (!isNaN(d.getTime())) {
+            let month = d.toLocaleString('en-US', { month: 'short' }); 
+            let year = d.getFullYear().toString().slice(-2); 
+            return `${month}-${year}`;
+        }
+        return str; 
+    }
+
+    function setupDropdownBulan(headers, data) {
+        const filterBulan = document.getElementById("filterBulan");
+        filterBulan.innerHTML = '<option value="SEMUA">Tampilkan Semua Bulan</option>';
+        
+        let idxTanggal = headers.findIndex(h => {
+            let nama = h.toString().toUpperCase().trim();
+            return ["DATE", "TANGGAL", "BULAN", "PERIODE"].includes(nama);
+        });
+
+        if (idxTanggal !== -1 && data.length > 0) {
+            let uniqueMonths = new Set();
+            
+            data.forEach(row => {
+                let val = row[idxTanggal];
+                if (val) {
+                    let bulanTahun = ekstrakBulanTahun(val);
+                    if (bulanTahun) uniqueMonths.add(bulanTahun);
+                }
+            });
+
+            if (uniqueMonths.size > 0) {
+                let arrMonths = Array.from(uniqueMonths);
+                arrMonths.forEach(bulan => {
+                    let option = document.createElement("option");
+                    option.value = bulan;
+                    option.innerText = bulan;
+                    filterBulan.appendChild(option);
+                });
+                
+                filterBulan.classList.remove("d-none");
+                return;
+            }
+        }
+        filterBulan.classList.add("d-none");
+    }
+
+    function terapkanFilter() {
+        let bulanDipilih = document.getElementById("filterBulan").value;
+        let dataTerfilter = window.dataAsli;
+
+        if (bulanDipilih !== "SEMUA") {
+            let idxTanggal = window.headersAsli.findIndex(h => {
+                let nama = h.toString().toUpperCase().trim();
+                return ["DATE", "TANGGAL", "BULAN", "PERIODE"].includes(nama);
+            });
+
+            if (idxTanggal !== -1) {
+                dataTerfilter = window.dataAsli.filter(row => {
+                    let val = row[idxTanggal];
+                    return val && ekstrakBulanTahun(val) === bulanDipilih;
+                });
+            }
+        }
+
+        let judul = document.getElementById("judulHalaman").innerText;
+        tampilkanTabelDinamis(judul, window.headersAsli, dataTerfilter, window.jenisDataAktif);
     }
 
     function tampilkanTabelDinamis(judul, headers, data, jenisData) {
@@ -182,7 +314,6 @@
         document.getElementById("judulHalaman").innerText = judul;
         
         const tabelUtama = document.getElementById("tabelUtama");
-        // Tabel Insentif menggunakan desain border hitam putih
         if (jenisData === 'INSENTIF') tabelUtama.classList.remove("header-gelap");
         else tabelUtama.classList.add("header-gelap");
 
@@ -191,7 +322,7 @@
         const tfoot = document.getElementById("tabelFooter");
         
         // -------------------------------------------------------------
-        // BLOK 1: LOGIKA KHUSUS UNTUK DATA INSENTIF (67 KOLOM DIUBAH KE BAWAH)
+        // BLOK 1: LOGIKA KHUSUS UNTUK DATA INSENTIF (67 KOLOM)
         // -------------------------------------------------------------
         if (jenisData === 'INSENTIF') {
             thead.innerHTML = `<tr>
@@ -202,19 +333,16 @@
             
             let barisBody = "";
             if (data.length === 0) {
-                barisBody = `<tr><td colspan="3">Data kosong</td></tr>`;
+                barisBody = `<tr><td colspan="3" class="text-center py-4 text-muted fw-bold">Tidak ada data untuk bulan terpilih.</td></tr>`;
             } else {
-                let dt = data[0]; // 1 baris data karyawan untuk 67 kolom
+                let dt = data[0]; 
                 
-                // Looping 31 Hari (Index ke-2 (01 Jul) sampai ke-32 (31 Jul))
                 for(let i = 2; i <= 32; i++) { 
                     let tgl = headers[i];
                     if(tgl && String(tgl).trim() !== "") {
                         let insentif = String(dt[i]).trim();
-                        // Jika kosong atau 0, sesuaikan agar rapi
                         if(insentif === "" || insentif === "0") insentif = "-";
                         
-                        // Keterangan mulai dari Index ke-34 (KET1) sampai ke-64 (KET31)
                         let ketIndex = i + 32; 
                         let ket = String(dt[ketIndex]).trim();
                         if(ket === "0" || ket === "" || ket.includes("1899")) ket = "-";
@@ -229,7 +357,6 @@
             }
             tbody.innerHTML = barisBody;
 
-            // Footer untuk Total & Rapel (Index 33 adalah Total, Index 65 adalah Rapel)
             if (data.length > 0) {
                 let dt = data[0];
                 tfoot.innerHTML = `
@@ -246,7 +373,7 @@
             } else {
                 tfoot.innerHTML = "";
             }
-            return; // Hentikan di sini agar tidak memproses Blok 2
+            return;
         }
 
         // -------------------------------------------------------------
@@ -274,7 +401,7 @@
         let totalNilaiHm = 0;
 
         if (data.length === 0) {
-            barisBody = `<tr><td colspan="${jumlahKolomTampil}" class="text-center py-4">Belum ada data.</td></tr>`;
+            barisBody = `<tr><td colspan="${jumlahKolomTampil}" class="text-center py-4 text-muted fw-bold">Tidak ada data untuk bulan terpilih.</td></tr>`;
         } else {
             data.forEach(baris => {
                 barisBody += "<tr>";
@@ -283,7 +410,12 @@
                         let teksSel = String(sel).trim();
                         let judulKolom = headers[index].toString().toUpperCase();
                         
-                        // Pembersihan teks KET atau 0
+                        // 1. TERAPKAN FORMAT TANGGAL KHUSUS UNTUK KOLOM DATE / TANGGAL
+                        if (["DATE", "TANGGAL", "BULAN", "PERIODE"].includes(judulKolom)) {
+                            teksSel = formatTanggalTampil(teksSel);
+                        }
+                        
+                        // 2. Pembersihan teks KET atau 0
                         if ((judulKolom.includes("KET") || judulKolom.includes("STATUS")) && (teksSel === "0" || teksSel === "0:00" || teksSel === "00:00" || teksSel.includes("1899"))) {
                             teksSel = "-";
                         }
@@ -307,7 +439,7 @@
             headers.forEach((namaKolom, index) => {
                 if (!indeksSembunyi.includes(index)) {
                     if (index === indexHmTotal - 1) barisFooter += `<th class="text-end">JUMLAH TOTAL:</th>`;
-                    else if (index === indexHmTotal) barisFooter += `<th>${totalNilaiHm}</th>`;
+                    else if (index === indexHmTotal) barisFooter += `<th>${totalNilaiHm.toFixed(2)}</th>`; 
                     else barisFooter += `<th></th>`;
                 }
             });

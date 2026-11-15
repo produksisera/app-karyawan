@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Karyawan - Prodsera</title>
+    
+    <!-- Pustaka Desain Font dan Bootstrap CSS -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <style>
+        body { background-color: #f0f2f5; font-family: 'Poppins', sans-serif; }
+        
+        .navbar-custom { background-color: #1a252f; padding: 15px 0; }
+        .navbar-brand { font-weight: 700; color: #ffde00 !important; font-size: 1.5rem; }
+        .nav-link { font-weight: 500; color: #ffffff !important; margin: 0 5px; border-radius: 5px; transition: 0.3s; }
+        .nav-link:hover, .nav-link.active { background-color: #ffde00; color: #000000 !important; }
+        
+        .card { border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: none; }
+        .table-container { max-height: 65vh; overflow-y: auto; border-radius: 8px; box-shadow: inset 0 0 5px rgba(0,0,0,0.05); }
+        
+        /* Desain Tabel Utama */
+        .table thead th { background-color: #ffffff; color: #000000; text-align: center; position: sticky; top: 0; z-index: 1; border: 2px solid #000 !important; white-space: nowrap; }
+        .table tbody td { text-align: center; vertical-align: middle; white-space: nowrap; border: 1px solid #000 !important; }
+        .table tbody tr:hover { background-color: #e2e6ea !important; }
+        
+        /* Tema Gelap untuk Header Tabel */
+        .header-gelap thead th { background-color: #2c3e50 !important; color: #ffffff !important; border: 1px solid #dee2e6 !important; }
+        .header-gelap tbody td { border: 1px solid #dee2e6 !important; }
+
+        .row-total { background-color: #ffde00 !important; }
+        .row-total th { background-color: transparent !important; color: #000000 !important; font-weight: 700; font-size: 1.1rem; border: 1px solid #000 !important;}
+
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        
+        #halamanData, #loadingData { display: none; }
+        .login-container { padding-top: 10vh; }
+    </style>
+</head>
+<body>
+
+<!-- MENU ATAS (NAVBAR) -->
+<nav class="navbar navbar-expand-lg navbar-custom d-none" id="menuNav">
+    <div class="container">
+        <a class="navbar-brand" href="#">PORTAL PRODSERA</a>
+        <button class="navbar-toggler bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0" id="daftarMenu">
+                <li class="nav-item"><a class="nav-link active" href="#" onclick="muatData('HM', this)">Data HM</a></li>
+                <li class="nav-item"><a class="nav-link" href="#" onclick="muatData('Insentif_HM', this)">Insentif HM</a></li>
+                <li class="nav-item"><a class="nav-link" href="#" onclick="muatData('Add_Insentif', this)">Add Insentif</a></li>
+                <li class="nav-item"><a class="nav-link" href="#" onclick="muatData('ABSEN', this)">Absen</a></li>
+                <li class="nav-item"><a class="nav-link" href="#" onclick="muatData('CTN', this)">Sisa CTN</a></li>
+            </ul>
+            <div class="d-flex align-items-center">
+                <span class="text-light me-3 fw-bold" id="infoKaryawanNav"></span>
+                <button class="btn btn-danger btn-sm fw-bold px-3" onclick="logout()">Keluar</button>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="container fade-in">
+    <!-- HALAMAN LOGIN -->
+    <div class="row justify-content-center login-container" id="halamanLogin">
+        <div class="col-md-6 col-lg-5">
+            <div class="card p-4 p-md-5">
+                <div class="text-center mb-4">
+                    <h3 class="fw-bold" style="color: #2c3e50;">Masuk Akun</h3>
+                    <p class="text-muted">Gunakan NRP dan Tanggal Lahir</p>
+                </div>
+                <div class="mb-3">
+                    <label class="fw-semibold mb-1">NRP</label>
+                    <input type="number" id="inputNrp" class="form-control form-control-lg" placeholder="NRP 8 Digit, Contoh: 01112345">
+                </div>
+                <div class="mb-4">
+                    <label class="fw-semibold mb-1">Tanggal Lahir</label>
+                    <input type="number" id="inputTglLahir" class="form-control form-control-lg" placeholder="Contoh: 170845">
+                </div>
+                <button onclick="login()" class="btn btn-primary btn-lg w-100 fw-bold" id="btnLogin" style="background-color: #0056b3; border:none;">
+                    <span id="btnText">Masuk Portal</span>
+                    <span id="btnSpinner" class="spinner-border spinner-border-sm d-none"></span>
+                </button>
+                <div id="pesanError" class="text-danger mt-3 text-center fw-semibold"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAMPILAN LOADING -->
+    <div id="loadingData" class="text-center mt-5">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
+        <h4 class="mt-3 text-muted">Mengambil data dari server...</h4>
+    </div>
+
+    <!-- HALAMAN TABEL DATA -->
+    <div id="halamanData" class="mt-4 fade-in">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3">
+            <h3 class="fw-bold mb-2 mb-md-0" style="color: #2c3e50;" id="judulHalaman">Data HM</h3>
+            <select id="filterBulan" class="form-select w-auto d-none shadow-sm border-dark fw-semibold" onchange="terapkanFilter()">
+                <option value="SEMUA">Semua Bulan</option>
+            </select>
+        </div>
+
+        <div class="card p-0 overflow-hidden">
+            <div class="table-container" id="containerTabelUtama">
+                <!-- Tabel akan digenerate otomatis di sini -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Script Javascript Bootstrap -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    // ⚠️ GANTI DENGAN URL APPS SCRIPT ANDA
+    const urlGoogleScript = "https://script.google.com/macros/s/AKfycbxmhXBjnRevimNXyDbqh8s-chCG3psuNJDwKLY8slLiBhONWfSTFIZB13yDqZ4FZm3J/exec";
+
+    let sesiNrp = "";
+    let sesiTglLahir = "";
+    
+    window.dataAsli = [];
+    window.headersAsli = [];
+    window.jenisDataAktif = "";
+
+    // FUNGSI LOGIN
+    function login() {
+        const nrp = document.getElementById("inputNrp").value;
+        const tglLahir = document.getElementById("inputTglLahir").value;
+        const pesan = document.getElementById("pesanError");
+        const btn = document.getElementById("btnLogin");
+
+        if(!nrp || !tglLahir) { pesan.innerText = "NRP dan Tanggal Lahir tidak boleh kosong!"; return; }
+
+        pesan.innerText = "";
+        document.getElementById("btnText").innerText = " Memeriksa Kredensial...";
+        document.getElementById("btnSpinner").classList.remove("d-none");
+        btn.disabled = true;
+
+        fetch(`${urlGoogleScript}?nrp=${nrp}&tglLahir=${tglLahir}&jenis=HM`)
+            .then(response => {
+                if (!response.ok) throw new Error("Terjadi gangguan jaringan.");
+                return response.json();
+            })
+            .then(hasil => {
+                document.getElementById("btnText").innerText = "Masuk Portal";
+                document.getElementById("btnSpinner").classList.add("d-none");
+                btn.disabled = false;
+
+                if (hasil && hasil.status === 'sukses') {
+                    sesiNrp = nrp;
+                    sesiTglLahir = tglLahir;
+                    document.getElementById("halamanLogin").style.display = "none";
+                    document.getElementById("menuNav").classList.remove("d-none");
+                    
+                    let nama = hasil.nama ? hasil.nama : "";
+                    document.getElementById("infoKaryawanNav").innerText = `Halo, ${nama} (${nrp})`;
+                    
+                    window.dataAsli = hasil.data;
+                    window.headersAsli = hasil.headers;
+                    window.jenisDataAktif = 'HM';
+
+                    setupDropdownBulan(hasil.headers, hasil.data);
+                    tampilkanTabelDinamis('Data HM', hasil.headers, hasil.data, 'HM');
+                } else {
+                    pesan.innerText = hasil ? hasil.pesan : "Gagal masuk."; 
+                }
+            }).catch(error => {
+                document.getElementById("btnText").innerText = "Masuk Portal";
+                document.getElementById("btnSpinner").classList.add("d-none");
+                btn.disabled = false;
+                pesan.innerText = "Gagal terhubung ke server. Periksa URL Apps Script Anda.";
+            });
+    }
+
+    // FUNGSI MEMUAT DATA BERDASARKAN MENU YANG DIKLIK
+    function muatData(jenisData, elemenMenu) {
+        document.querySelectorAll('.nav-link').forEach(menu => menu.classList.remove('active'));
+        if (elemenMenu) elemenMenu.classList.add('active');
+
+        let judul = "Data " + jenisData;
+        if (jenisData === 'CTN') judul = "Data Sisa CTN";
+        else if (jenisData === 'Add_Insentif') judul = "Data Insentif Tambahan";
+        else if (jenisData === 'Insentif_HM') judul = "Data Insentif HM";
+
+        document.getElementById("halamanData").style.display = "none";
+        document.getElementById("loadingData").style.display = "block";
+        document.getElementById("filterBulan").classList.add("d-none"); 
+
+        fetch(`${urlGoogleScript}?nrp=${sesiNrp}&tglLahir=${sesiTglLahir}&jenis=${jenisData}`)
+            .then(response => response.json())
+            .then(hasil => {
+                document.getElementById("loadingData").style.display = "none";
+                if (hasil && hasil.status === 'sukses') {
+                    window.dataAsli = hasil.data;
+                    window.headersAsli = hasil.headers;
+                    window.jenisDataAktif = jenisData;
+
+                    setupDropdownBulan(hasil.headers, hasil.data);
+                    tampilkanTabelDinamis(judul, hasil.headers, hasil.data, jenisData);
+                }
+                else { alert("Error: " + (hasil ? hasil.pesan : "Gagal memuat")); document.getElementById("halamanData").style.display = "block"; }
+            }).catch(error => { document.getElementById("loadingData").style.display = "none"; alert("Gagal mengambil data."); });
+    }
+
+    function formatTanggalTampil(tglString) {
+        if (!tglString) return "";
+        let str = String(tglString).trim();
+        let regexBulanHariTahun = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/;
+        let match = str.match(regexBulanHariTahun);
+        
+        if (match) {
+            let bulan = match[1].padStart(2, '0');
+            let hari = match[2].padStart(2, '0'); 
+            let tahun = match[3];
+            if (tahun.length === 4) tahun = tahun.slice(-2);
+            return `${hari}/${bulan}/${tahun}`;
+        }
+        return str;
+    }
+
+    function ekstrakBulanTahun(tglStr) {
+        if (!tglStr) return "";
+        let str = String(tglStr).trim();
+        let parts = str.split('-');
+        if (parts.length === 3 && isNaN(parts[1])) {
+            return parts[1] + '-' + parts[2]; 
+        }
+        let d = new Date(str);
+        if (!isNaN(d.getTime())) {
+            let month = d.toLocaleString('en-US', { month: 'short' }); 
+            let year = d.getFullYear().toString().slice(-2); 
+            return `${month}-${year}`;
+        }
+        return str; 
+    }
+
+    function setupDropdownBulan(headers, data) {
+        const filterBulan = document.getElementById("filterBulan");
+        filterBulan.innerHTML = '<option value="SEMUA">Tampilkan Semua Bulan</option>';
+        
+        if (window.jenisDataAktif === 'Insentif_HM' || window.jenisDataAktif === 'Add_Insentif') {
+            filterBulan.classList.add("d-none");
+            return;
+        }
+
+        let idxTanggal = headers.findIndex(h => {
+            let nama = h.toString().toUpperCase().trim();
+            return ["DATE", "TANGGAL", "BULAN", "PERIODE"].includes(nama);
+        });
+
+        if (idxTanggal !== -1 && data.length > 0) {
+            let uniqueMonths = new Set();
+            data.forEach(row => {
+                let val = row[idxTanggal];
+                if (val) {
+                    let bulanTahun = ekstrakBulanTahun(val);
+                    if (bulanTahun) uniqueMonths.add(bulanTahun);
+                }
+            });
+
+            if (uniqueMonths.size > 0) {
+                Array.from(uniqueMonths).forEach(bulan => {
+                    let option = document.createElement("option");
+                    option.value = bulan;
+                    option.innerText = bulan;
+                    filterBulan.appendChild(option);
+                });
+                filterBulan.classList.remove("d-none");
+                return;
+            }
+        }
+        filterBulan.classList.add("d-none");
+    }
+
+    function terapkanFilter() {
+        let bulanDipilih = document.getElementById("filterBulan").value;
+        let dataTerfilter = window.dataAsli;
+
+        if (bulanDipilih !== "SEMUA") {
+            let idxTanggal = window.headersAsli.findIndex(h => {
+                let nama = h.toString().toUpperCase().trim();
+                return ["DATE", "TANGGAL", "BULAN", "PERIODE"].includes(nama);
+            });
+
+            if (idxTanggal !== -1) {
+                dataTerfilter = window.dataAsli.filter(row => {
+                    let val = row[idxTanggal];
+                    return val && ekstrakBulanTahun(val) === bulanDipilih;
+                });
+            }
+        }
+        tampilkanTabelDinamis(document.getElementById("judulHalaman").innerText, window.headersAsli, dataTerfilter, window.jenisDataAktif);
+    }
+
+    // FUNGSI UTAMA UNTUK MENGGAMBAR TABEL DI LAYAR
+    function tampilkanTabelDinamis(judul, headers, data, jenisData) {
+        document.getElementById("halamanData").style.display = "block";
+        document.getElementById("judulHalaman").innerText = judul;
+        
+        const containerTabel = document.getElementById("containerTabelUtama");
+        containerTabel.innerHTML = ""; 
+
+        // 1. FORMAT UNTUK ADD_INSENTIF
+        if (jenisData === 'Add_Insentif') {
+            let htmlTable = `<table class="table mb-0" id="tabelUtama">
+                <thead>
+                    <tr>
+                        <th style="background-color: #fff; color: #000; border: 2px solid #000 !important;">TANGGAL</th>
+                        <th style="background-color: #fff; color: #000; border: 2px solid #000 !important;">PEROLEHAN INSENTIF</th>
+                        <th style="background-color: #fff; color: #000; border: 2px solid #000 !important;">KETERANGAN</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+            
+            if (data.length === 0) {
+                htmlTable += `<tr><td colspan="3" class="text-center py-4 text-muted fw-bold">Tidak ada data.</td></tr>`;
+            } else {
+                let dt = data[0]; 
+                for(let i = 2; i <= 32; i++) { 
+                    let tgl = headers[i];
+                    if(tgl && String(tgl).trim() !== "") {
+                        let insentif = String(dt[i]).trim();
+                        if(insentif === "" || insentif === "0") insentif = "-";
+                        let ketIndex = i + 32; 
+                        let ket = String(dt[ketIndex]).trim();
+                        if(ket === "0" || ket === "" || ket.includes("1899")) ket = "-";
+
+                        htmlTable += `<tr>
+                            <td style="border: 1px solid #000;">${tgl}</td>
+                            <td style="border: 1px solid #000;">${insentif}</td>
+                            <td style="border: 1px solid #000;">${ket}</td>
+                        </tr>`;
+                    }
+                }
+            }
+            htmlTable += `</tbody>`;
+            if (data.length > 0) {
+                let dt = data[0];
+                htmlTable += `<tfoot>
+                    <tr><td colspan="3" style="border: none !important; height: 30px;"></td></tr>
+                    <tr class="row-total">
+                        <th colspan="2" class="text-end" style="border: 2px solid #000 !important;">TOTAL</th>
+                        <th class="text-center" style="border: 2px solid #000 !important;">${String(dt[33]).trim()}</th>
+                    </tr>
+                </tfoot>`;
+            }
+            htmlTable += `</table>`;
+            containerTabel.innerHTML = htmlTable;
+            return;
+        }
+
+        // 2. FORMAT KHUSUS UNTUK INSENTIF_HM (MULTI AREA + PERBAIKAN AKUMULASI GRAND TOTAL)
+        if (jenisData === 'Insentif_HM') {
+            if (!data || data.length === 0) {
+                containerTabel.innerHTML = `<table class="table mb-0"><tbody><tr><td class="text-center py-4 text-muted fw-bold">Tidak ada data.</td></tr></tbody></table>`;
+                return;
+            }
+
+            let htmlAllTables = "";
+            let grandTotalInsentif = 0; 
+
+            let getValByHeader = (dtObj, keyword) => {
+                if (!headers) return "-";
+                let idx = headers.findIndex(h => h && h.toString().toUpperCase().includes(keyword));
+                if (idx !== -1 && dtObj[idx] !== undefined && dtObj[idx] !== "") return dtObj[idx];
+                return "-";
+            };
+
+            data.forEach((dt, rowIndex) => {
+                let areaIdx = headers.findIndex(h => h && (h.toString().toUpperCase().includes("AREA") || h.toString().toUpperCase().includes("LOKASI")));
+                if (areaIdx === -1) areaIdx = 41; 
+                let namaArea = (dt[areaIdx] !== undefined && dt[areaIdx] !== "") ? dt[areaIdx] : `Area Kerja ${rowIndex + 1}`;
+
+                // PERBAIKAN: Membersihkan tanda titik/koma ribuan agar nilai terbaca sebagai angka utuh
+                let valTotalIns = getValByHeader(dt, "TOTAL INSENTIF");
+                if (valTotalIns && valTotalIns !== "-") {
+                    let cleanNum = parseFloat(String(valTotalIns).replace(/\./g, '').replace(/,/g, '.'));
+                    if (!isNaN(cleanNum)) {
+                        grandTotalInsentif += cleanNum;
+                    }
+                }
+
+                htmlAllTables += `
+                    <div class="p-3 bg-light border-bottom fw-bold text-primary">
+                        📍 Area Kerja / Lokasi: ${namaArea}
+                    </div>
+                    <table class="table mb-4">
+                        <thead>
+                            <tr>
+                                <th style="background-color: #2c3e50; color: #fff; border: 1px solid #000;">UNIT MODEL</th>
+                                <th style="background-color: #2c3e50; color: #fff; border: 1px solid #000;">TARIF</th>
+                                <th style="background-color: #2c3e50; color: #fff; border: 1px solid #000;">HM</th>
+                                <th style="background-color: #2c3e50; color: #fff; border: 1px solid #000;">SF</th>
+                                <th style="background-color: #2c3e50; color: #fff; border: 1px solid #000;">SHF</th>
+                                <th style="background-color: #2c3e50; color: #fff; border: 1px solid #000;">AF</th>
+                                <th style="background-color: #2c3e50; color: #fff; border: 1px solid #000;">PF</th>
+                                <th style="background-color: #2c3e50; color: #fff; border: 1px solid #000;">INSENTIF PRODUKSI</th>
+                                <th style="background-color: #2c3e50; color: #fff; border: 1px solid #000;">KEKURANGAN BULAN LALU</th>
+                                <th style="background-color: #2c3e50; color: #fff; border: 1px solid #000;">KELEBIHAN BULAN LALU</th>
+                                <th style="background-color: #2c3e50; color: #fff; border: 1px solid #000;">TOTAL INSENTIF</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+                let daftarUnit = [
+                    { nama: "LOWBOY", tarif: "10,900" },
+                    { nama: "PC2000/GD825/D375/WA800", tarif: "10,400" },
+                    { nama: "HD785", tarif: "9,800" },
+                    { nama: "PC 1250/GD705/D155/ZX870", tarif: "8,500" },
+                    { nama: "HD465", tarif: "8,200" },
+                    { nama: "PC750/PC800/D9R", tarif: "6,000" },
+                    { nama: "K380/FM9/ACTROSS", tarif: "4,400" },
+                    { nama: "PC400", tarif: "4,900" },
+                    { nama: "PC200/PC300/D85/D7G", tarif: "3,800" },
+                    { nama: "WA 500", tarif: "6,000" },
+                    { nama: "WT, FUEL, LT, TYRE HANDLER, WA 500 SUPPORT", tarif: "2,600" },
+                    { nama: "FORKLIFT", tarif: "1,400" },
+                    { nama: "CRANE TRUCK < 25 TON", tarif: "3,200" },
+                    { nama: "CRANE 25-50 TON", tarif: "4,900" },
+                    { nama: "CRANE > 51 TON", tarif: "6,700" },
+                    { nama: "P410", tarif: "5,500" }
+                ];
+
+                let sfVal = getValByHeader(dt, "SF");
+                let shfVal = getValByHeader(dt, "SHF");
+                let afVal = getValByHeader(dt, "AF");
+                let pfVal = getValByHeader(dt, "PF");
+                let kurangVal = getValByHeader(dt, "KEKURANGAN BULAN LALU");
+                let lebihVal = getValByHeader(dt, "KELEBIHAN BULAN LALU");
+                let totalInsVal = getValByHeader(dt, "TOTAL INSENTIF");
+
+                daftarUnit.forEach((item, index) => {
+                    let sheetColIdx = index + 2; 
+                    let hmVal = (dt[sheetColIdx] !== undefined && dt[sheetColIdx] !== "") ? dt[sheetColIdx] : "0";
+                    let insProdColIdx = 25 + index; 
+                    let insProdVal = (dt[insProdColIdx] !== undefined && dt[insProdColIdx] !== "") ? dt[insProdColIdx] : "0";
+
+                    htmlAllTables += `<tr>
+                        <td style="border: 1px solid #000; text-align: left; font-weight: 600;">${item.nama}</td>
+                        <td style="border: 1px solid #000;">${item.tarif}</td>
+                        <td style="border: 1px solid #000;">${hmVal}</td>`;
+
+                    if (index === 0) {
+                        htmlAllTables += `
+                            <td rowspan="16" style="border: 1px solid #000; vertical-align: middle;">${sfVal}</td>
+                            <td rowspan="16" style="border: 1px solid #000; vertical-align: middle;">${shfVal}</td>
+                            <td rowspan="16" style="border: 1px solid #000; vertical-align: middle;">${afVal}</td>
+                            <td rowspan="16" style="border: 1px solid #000; vertical-align: middle;">${pfVal}</td>
+                        `;
+                    }
+
+                    htmlAllTables += `<td style="border: 1px solid #000;">${insProdVal}</td>`;
+
+                    if (index === 0) {
+                        htmlAllTables += `
+                            <td rowspan="16" style="border: 1px solid #000; vertical-align: middle;">${kurangVal}</td>
+                            <td rowspan="16" style="border: 1px solid #000; vertical-align: middle;">${lebihVal}</td>
+                            <td rowspan="16" style="border: 1px solid #000; vertical-align: middle; font-weight: bold;">${totalInsVal}</td>
+                        `;
+                    }
+
+                    htmlAllTables += `</tr>`;
+                });
+
+                htmlAllTables += `</tbody></table><br>`;
+            });
+
+            // Tampilkan total keseluruhan (muncul walau 1 area atau lebih, diformat rapi dengan titik ribuan Indonesia)
+            htmlAllTables += `
+                <div class="card p-4 mb-4" style="background-color: #ffde00; color: #000;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="fw-bold m-0">TOTAL KESELURUHAN INSENTIF:</h4>
+                        <h3 class="fw-bold m-0">Rp ${grandTotalInsentif.toLocaleString('id-ID')}</h3>
+                    </div>
+                </div>
+            `;
+
+            containerTabel.innerHTML = htmlAllTables;
+            return;
+        }
+
+        // 3. FORMAT UMUM UNTUK HM, ABSEN, DAN CTN
+        let modifiedHeaders = [...headers];
+        let modifiedData = data.map(baris => [...baris]);
+
+        if (jenisData === 'ABSEN') {
+            let idxKet = modifiedHeaders.findIndex(h => h.toString().toUpperCase().trim().includes("KET"));
+            if (idxKet === -1) idxKet = modifiedHeaders.length;
+            modifiedHeaders.splice(idxKet, 0, "DWS");
+            modifiedData.forEach(row => row.splice(idxKet, 0, "-"));
+        }
+
+        let indeksSembunyi = [];
+        let indexHmTotal = -1;
+        let indexLembur = -1;
+        let barisHeader = "<tr>";
+        let jumlahKolomTampil = 0;
+
+        modifiedHeaders.forEach((namaKolom, index) => {
+            let judulKolom = namaKolom.toString().toUpperCase().trim();
+            if (judulKolom.includes("TGL LAHIR")) {
+                indeksSembunyi.push(index);
+            } else {
+                barisHeader += `<th>${namaKolom}</th>`; 
+                jumlahKolomTampil++;
+                if (judulKolom === "HM TOTAL") indexHmTotal = index;
+                if (judulKolom === "LEMBUR" || judulKolom === "OVERTIME") indexLembur = index;
+            }
+        });
+        barisHeader += "</tr>";
+
+        let htmlGeneralTable = `<table class="table mb-0 header-gelap" id="tabelUtama">
+            <thead>${barisHeader}</thead>
+            <tbody>`;
+
+        if (modifiedData.length === 0) {
+            htmlGeneralTable += `<tr><td colspan="${jumlahKolomTampil}" class="text-center py-4 text-muted fw-bold">Tidak ada data.</td></tr>`;
+        } else {
+            modifiedData.forEach(baris => {
+                htmlGeneralTable += "<tr>";
+                baris.forEach((sel, index) => {
+                    if (!indeksSembunyi.includes(index)) {
+                        let teksSel = String(sel).trim();
+                        let judulKolom = modifiedHeaders[index].toString().toUpperCase();
+                        if (["DATE", "TANGGAL", "BULAN", "PERIODE"].includes(judulKolom)) {
+                            teksSel = formatTanggalTampil(teksSel);
+                        }
+                        htmlGeneralTable += `<td>${teksSel}</td>`;
+                    }
+                });
+                htmlGeneralTable += "</tr>";
+            });
+        }
+        htmlGeneralTable += `</tbody></table>`;
+        containerTabel.innerHTML = htmlGeneralTable;
+    }
+
+    function logout() { location.reload(); }
+</script>
+</body>
+</html>

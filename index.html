@@ -494,6 +494,7 @@
         }
 
         let indeksSembunyi = [];
+        let indexHmTotal = -1;
         let indexLembur = -1;
         let barisHeader = "<tr>";
         let jumlahKolomTampil = 0;
@@ -505,6 +506,7 @@
             } else {
                 barisHeader += `<th>${namaKolom}</th>`; 
                 jumlahKolomTampil++;
+                if (judulKolom === "HM TOTAL") indexHmTotal = index;
                 if (judulKolom === "LEMBUR" || judulKolom === "OVERTIME") indexLembur = index;
             }
         });
@@ -514,7 +516,8 @@
             <thead>${barisHeader}</thead>
             <tbody>`;
 
-        let totalLembur = 0; // Variabel penampung total nilai lembur
+        let totalLembur = 0; 
+        let totalHmSum = 0; 
 
         if (modifiedData.length === 0) {
             htmlGeneralTable += `<tr><td colspan="${jumlahKolomTampil}" class="text-center py-4 text-muted fw-bold">Tidak ada data.</td></tr>`;
@@ -526,6 +529,14 @@
                         let teksSel = String(sel).trim();
                         let judulKolom = modifiedHeaders[index].toString().toUpperCase();
                         
+                        // PERBAIKAN: Tanda titik pada HM TOTAL (misal 9.1) langsung dibaca sebagai desimal
+                        if (judulKolom === "HM TOTAL" && teksSel !== "" && teksSel !== "-") {
+                            let valHm = parseFloat(teksSel.replace(/,/g, '.'));
+                            if (!isNaN(valHm)) {
+                                totalHmSum += valHm;
+                            }
+                        }
+
                         // Jika ini kolom Lembur, hitung totalnya
                         if ((judulKolom === "LEMBUR" || judulKolom === "OVERTIME") && teksSel !== "" && teksSel !== "-") {
                             let valNum = parseFloat(teksSel.replace(/,/g, '.'));
@@ -545,13 +556,23 @@
         }
         htmlGeneralTable += `</tbody>`;
 
-        // Jika menu yang aktif adalah ABSEN dan kolom Lembur ditemukan, tambahkan baris total di bagian bawah (tfoot)
+        // Baris Total untuk Menu ABSEN (Kolom Lembur)
         if (jenisData === 'ABSEN' && indexLembur !== -1) {
             htmlGeneralTable += `<tfoot>
                 <tr class="row-total">
                     <td colspan="${jumlahKolomTampil - 2}" class="text-end fw-bold" style="border: 2px solid #000 !important;">JUMLAH TOTAL:</td>
                     <td class="text-center fw-bold" style="border: 2px solid #000 !important;">${totalLembur.toFixed(2).replace(/\.00$/, '')}</td>
                     <td style="border: 2px solid #000 !important;"></td>
+                </tr>
+            </tfoot>`;
+        }
+
+        // Baris Total untuk Menu HM (Kolom HM TOTAL) dengan format angka titik desimal
+        if (jenisData === 'HM' && indexHmTotal !== -1) {
+            htmlGeneralTable += `<tfoot>
+                <tr class="row-total">
+                    <td colspan="${jumlahKolomTampil - 1}" class="text-end fw-bold" style="border: 2px solid #000 !important;">JUMLAH TOTAL HM:</td>
+                    <td class="text-center fw-bold" style="border: 2px solid #000 !important;">${totalHmSum.toFixed(2).replace(/\.00$/, '')}</td>
                 </tr>
             </tfoot>`;
         }
